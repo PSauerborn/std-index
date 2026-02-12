@@ -1,15 +1,34 @@
 cpu_arch ?= $(shell uname -m)
 
-.PHONY: run-build-image
-run-build-image: build-build-image
-	docker run --rm std-index-build
+# Map cpu_arch to docker platform
+ifeq ($(cpu_arch),x86_64)
+	platform := linux/amd64
+else ifeq ($(cpu_arch),amd64)
+	platform := linux/amd64
+else ifeq ($(cpu_arch),aarch64)
+	platform := linux/arm64
+else ifeq ($(cpu_arch),arm64)
+	platform := linux/arm64
+else
+	platform := linux/amd64
+endif
 
-.PHONY: build-build-image
-build-build-image: run-test-image
+working_dir ?= $(shell pwd)
+
+.PHONY: run-ci-image
+run-ci-image: build-ci-image
+	docker run --rm \
+		-e CPU_ARCH=$(cpu_arch) \
+		-v ${working_dir}/bin:/build/bin \
+		std-index-ci
+
+.PHONY: build-ci-image
+build-ci-image: run-test-image
 	docker build --target build \
-		-t std-index-build \
+		--platform $(platform) \
+		-t std-index-ci \
 		-f Dockerfile \
-		--build-arg CPU_ARCH=$(cpu_arch) .
+		.
 
 .PHONY: run-test-image
 run-test-image: build-test-image
